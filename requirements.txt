@@ -1,0 +1,5 @@
+azure-functions==1.18.0
+azure-identity==1.17.1
+azure-ai-projects==1.0.0b11
+azure-ai-agents==1.0.0
+python-dotenv==1.0.1
