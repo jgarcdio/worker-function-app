@@ -16,12 +16,16 @@ def process_queue_message(raw_body: str) -> None:
     logger.info(f"[WORKER] Procesando app={app_name}")
 
     mapping_result = call_mapping_api(app_name, raw_path)
-    logger.info(f"[WORKER] Mapping OK: vector_store_id={mapping_result.get('vector_store_id')}")
+    jobs = mapping_result.get("jobs", [])
+
+    logger.info(f"[WORKER] Mapping OK: {jobs}")
 
     payload = {
         "app": app_name,
         "outDocsPath": out_docs,
+        "jobs": jobs
     }
 
     start_orchestrator(payload)
-    logger.info("[WORKER] Orquestador disparado OK (fire-and-forget)")
+
+    logger.info(f"[WORKER] Orquestador disparado OK: {payload}")
