@@ -31,11 +31,8 @@ def start_orchestrator(payload: Dict[str, Any]) -> None:
     # 2) Mensaje inicial
     # Recomendación: NO mandes JSON gigante si no es necesario.
     # Ideal: manda solo app + vector_store_id + rutas, y que el agente consulte el vector.
-    content = (
-        "## Orquestación\n"
-        "Procesa este payload JSON:\n"
-        f"```json\n{_safe_json(payload)}\n```"
-    )
+
+    content = _safe_json(payload)
 
     project.agents.messages.create(
         thread_id=thread_id,

@@ -20,12 +20,14 @@ def process_queue_message(raw_body: str) -> None:
 
     logger.info(f"[WORKER] Mapping OK: {jobs}")
 
-    payload = {
-        "app": app_name,
-        "outDocsPath": out_docs,
-        "jobs": jobs
-    }
+    if not jobs:
+        logger.warning(f"[WORKER] No se detectaron JOBs para app={app_name}. No se dispara orquestación.")
+        return
 
-    start_orchestrator(payload)
+    for job_name in jobs:
+        payload = { "app": app_name,"outDocsPath": out_docs,"job": job_name }
+        logger.info(f"[WORKER] Disparando Orchestrator para job={job_name}")
 
-    logger.info(f"[WORKER] Orquestador disparado OK: {payload}")
+        start_orchestrator(payload)
+
+    logger.info(f"[WORKER] Orquestador disparado OK para {len(jobs)} jobs")
