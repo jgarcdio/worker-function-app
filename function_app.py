@@ -12,10 +12,10 @@ app = func.FunctionApp()
     queue_name="sa-queue-file-agent-cbl-doc",
     connection="QUEUE_CONN",
 )
-def worker_queue_trigger(msg: func.QueueMessage) -> None:
+async def worker_queue_trigger(msg: func.QueueMessage) -> None:
     try:
         raw_body = msg.get_body().decode("utf-8")
-        process_queue_message(raw_body)
+        await process_queue_message(raw_body)
     except Exception as e:
         logger.error(f"[WORKER] ERROR: {e}\n{traceback.format_exc()}")
         raise

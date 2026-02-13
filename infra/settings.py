@@ -8,3 +8,5 @@ POLL_TIMEOUT  = int(os.environ.get("POLL_TIMEOUT", "900"))
 
 MAPPING_API_URL = os.environ["API_URL"].rstrip("/")
 MAPPING_API_TIMEOUT = int(os.environ.get("API_TIMEOUT", "900"))
+
+ORCHESTRATOR_MAX_PARALLEL_JOBS = int(os.environ.get("ORCHESTRATOR_MAX_PARALLEL_JOBS", "5"))
