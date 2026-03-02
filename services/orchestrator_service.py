@@ -13,24 +13,48 @@ def _safe_json(obj: Any) -> str:
         return str(obj)
 
 
+def _build_tool_resources(vector_store_id: str | None) -> Dict[str, Any] | None:
+    """
+    Construye tool_resources para File Search (Vector Store) por thread/run.
+    Estructura esperada por Foundry:
+      tool_resources: { "file_search": { "vector_store_ids": ["..."] } }
+    """
+    if not vector_store_id:
+        return None
+    return {
+        "file_search": {
+            "vector_store_ids": [vector_store_id]
+        }
+    }
+
+
 def start_orchestrator(payload: Dict[str, Any]) -> None:
     """
     Dispara el OrchestratorAgent y retorna inmediatamente.
 
     IMPORTANTE:
-    - No guarda run_id/thread_id porque tu tracking lo hace StatusTool desde subagentes.
-    - Si la creación del run falla (quota/deployment/auth), lanzará excepción
-      para que el worker lo registre/reintente/mande a poison.
+    - No toca el agente global (NO update_agent).
+    - Adjunta el vector store al THREAD para aislar ejecuciones concurrentes.
     """
     project = get_project_client()
 
-    # 1) Crear thread
-    thread = project.agents.threads.create()
-    thread_id = thread.id
+    vector_store_id = payload.get("vectorStoreId")
+    tool_resources = _build_tool_resources(vector_store_id)
 
-    # 2) Mensaje inicial
-    # Recomendación: NO mandes JSON gigante si no es necesario.
-    # Ideal: manda solo app + vector_store_id + rutas, y que el agente consulte el vector.
+    try:
+        if tool_resources:
+            thread = project.agents.threads.create(tool_resources=tool_resources)
+        else:
+            thread = project.agents.threads.create()
+    except TypeError:
+        thread = project.agents.threads.create()
+        if tool_resources:
+            try:
+                project.agents.threads.update(thread_id=thread.id, tool_resources=tool_resources)
+            except Exception:
+                pass
+
+    thread_id = thread.id
 
     content = _safe_json(payload)
 
@@ -40,11 +64,12 @@ def start_orchestrator(payload: Dict[str, Any]) -> None:
         content=content,
     )
 
-    # 3) Crear run (NO esperamos)
-    project.agents.runs.create(
-        thread_id=thread_id,
-        agent_id=AGENT_ORCHESTRATOR_ID,
-    )
+    try:
+        project.agents.runs.create(
+            thread_id=thread_id,
+            agent_id=AGENT_ORCHESTRATOR_ID,
+        )
+    except TypeError:
+        project.agents.runs.create(thread_id=thread_id, agent_id=AGENT_ORCHESTRATOR_ID)
 
-    # Fire-and-forget: aquí termina.
     return

@@ -22,22 +22,34 @@ async def _start_orchestrator_async(payload: dict, sem: asyncio.Semaphore) -> No
 async def process_queue_message(raw_body: str) -> None:
     body = json.loads(raw_body)
 
-    app_name = body["app"]
+    run_id = body.get("runId")
+    application_name = body["applicationName"]
     raw_path = body["rawPath"]
     out_docs = body["outDocsPath"]
 
-    logger.info(f"[WORKER] Procesando app={app_name}")
+    logger.info(f"[WORKER] Procesando app={application_name} runId={run_id}")
 
-    mapping_result = call_mapping_api(app_name, raw_path)
+    mapping_result = call_mapping_api(application_name, raw_path)
 
     inventory_by_job = mapping_result.get("inventoryByJob", {}) or {}
+    vector_store_id = mapping_result.get("vectorStoreId")
+    vector_store_name = mapping_result.get("vectorStoreName")
     jobs = list(inventory_by_job.keys())
 
     logger.info(f"[WORKER] Mapping OK: jobs={jobs}")
 
     if not inventory_by_job:
-        logger.warning(f"[WORKER] inventoryByJob vacío para app={app_name}. No se dispara orquestación.")
+        logger.warning(
+            f"[WORKER] inventoryByJob vacío para app={application_name}. "
+            "No se dispara orquestación."
+        )
         return
+
+    if not vector_store_id:
+        logger.warning(
+            f"[WORKER] vectorStoreId vacío para app={application_name}. "
+            "Los agentes podrían ejecutarse sin acceso a File Search / Vector Store."
+        )
 
     max_parallel = max(1, int(ORCHESTRATOR_MAX_PARALLEL_JOBS))
     sem = asyncio.Semaphore(max_parallel)
@@ -49,16 +61,22 @@ async def process_queue_message(raw_body: str) -> None:
 
     tasks = []
     for job_name in jobs:
-        job_inventory = inventory_by_job.get(job_name, {})
+        job_inventory = inventory_by_job.get(job_name, {}) or {}
 
         payload = {
-            "app": app_name,
+            "applicationName": application_name,
+            "runId": run_id,
             "jobName": job_name,
             "outDocsPath": f"{out_docs}",
             "inventory": job_inventory,
+            "vectorStoreId": vector_store_id,
+            "vectorStoreName": vector_store_name
         }
 
-        logger.info(f"[WORKER] Encolando disparo Orchestrator para job={job_name}")
+        logger.info(
+            f"[WORKER] Encolando disparo Orchestrator para job={job_name} "
+            f"vectorStoreId={vector_store_id}"
+        )
         tasks.append(asyncio.create_task(_start_orchestrator_async(payload, sem)))
 
     await asyncio.gather(*tasks)

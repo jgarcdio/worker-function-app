@@ -1,8 +1,8 @@
 from infra.http_client import get_http_session
 from infra.settings import MAPPING_API_URL, MAPPING_API_TIMEOUT
 
-def call_mapping_api(app_name: str, raw_path: str) -> dict:
-    payload = {"app": app_name, "rawPath": raw_path}
+def call_mapping_api(application_name: str, raw_path: str) -> dict:
+    payload = {"applicationName": application_name, "rawPath": raw_path}
     response = get_http_session().post(
         MAPPING_API_URL,
         json=payload,
