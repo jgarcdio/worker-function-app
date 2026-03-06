@@ -5,6 +5,10 @@
     "queues": {
       "maxDequeueCount": 2,
       "visibilityTimeout": "00:20:00"
+    },
+    "eventHubs": {
+      "maxBatchSize": 1,
+      "prefetchCount": 64
     }
   },
   "logging": {

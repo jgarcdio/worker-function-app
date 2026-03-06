@@ -7,14 +7,15 @@ from jobs.queue_processor import process_queue_message
 logger = configure_logging()
 app = func.FunctionApp()
 
-@app.queue_trigger(
-    arg_name="msg",
-    queue_name="sa-queue-file-agent-cbl-doc",
-    connection="QUEUE_CONN",
+@app.event_hub_message_trigger(
+    arg_name="event",
+    event_hub_name="%EVENTHUB_NAME%",
+    connection="EVENTHUB_CONN",
+    consumer_group="%EVENTHUB_CONSUMER_GROUP%",
 )
-async def worker_queue_trigger(msg: func.QueueMessage) -> None:
+async def worker_eventhub_trigger(event: func.EventHubEvent) -> None:
     try:
-        raw_body = msg.get_body().decode("utf-8")
+        raw_body = event.get_body().decode("utf-8")
         await process_queue_message(raw_body)
     except Exception as e:
         logger.error(f"[WORKER] ERROR: {e}\n{traceback.format_exc()}")
